@@ -29,8 +29,22 @@
         <button onclick="login()">Войти</button>
 
         <div id="login-message"></div>
+        <hr>
+<h2>Новый пост</h2>
+<div id="post-form">
+    <input type="text" id="post-title" placeholder="Заголовок поста" required>
+    <textarea id="post-content" placeholder="Содержание поста" rows="5" required></textarea>
+    <input type="text" id="post-tags" placeholder="Теги (через запятую)">
+    <select id="post-visibility">
+        <option value="public">Публичный</option>
+        <option value="private">Скрытый</option>
+    </select>
+    <button onclick="createPost()">Опубликовать пост</button>
+</div>
+<div id="post-message"></div>
     </div>
 
     <script src="script.js"></script>
+    
 </body>
 </html>
