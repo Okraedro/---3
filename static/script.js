@@ -111,3 +111,4 @@ function login() {
             '<div class="message error">Произошла сетевая ошибка</div>';
     });
 }
+}
