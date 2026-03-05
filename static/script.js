@@ -61,4 +61,53 @@ function login() {
         document.getElementById('login-message').innerHTML =
             '<div class="message error">Произошла сетевая ошибка</div>';
     });
+
+    function createPost() {
+    // Получаем данные из формы
+    const title = document.getElementById('post-title').value;
+    const content = document.getElementById('post-content').value;
+    const tags = document.getElementById('post-tags').value;
+    const visibility = document.getElementById('post-visibility').value;
+
+    // Берём ID пользователя из localStorage (сохраняется при входе)
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser) {
+        alert('Сначала войдите в систему!');
+        return;
+    }
+
+    const user_id = currentUser.user_id;
+
+    fetch('/post', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            user_id: user_id,
+            title: title,
+            content: content,
+            tags: tags,
+            visibility: visibility
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const messageDiv = document.getElementById('post-message');
+        if (data.success) {
+            messageDiv.innerHTML =
+                `<div class="message success">${data.message}. ID поста: ${data.post_id}</div>`;
+            // Очистка формы после успешной отправки
+            document.getElementById('post-title').value = '';
+            document.getElementById('post-content').value = '';
+            document.getElementById('post-tags').value = '';
+        } else {
+            messageDiv.innerHTML = `<div class="message error">Ошибка: ${data.error}</div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка:', error);
+        document.getElementById('post-message').innerHTML =
+            '<div class="message error">Произошла сетевая ошибка</div>';
+    });
 }
