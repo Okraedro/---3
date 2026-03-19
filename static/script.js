@@ -334,3 +334,91 @@ function searchPostsByTags() {
     .then(posts => {
         const container = document.getElementById('search-results-container');
 
+function updatePost() {
+    const post_id = parseInt(document.getElementById('edit-post-id').value);
+    const title = document.getElementById('edit-title').value;
+    const content = document.getElementById('edit-content').value;
+    const tags = document.getElementById('edit-tags').value;
+    const visibility = document.getElementById('edit-visibility').value;
+
+    // Берём ID текущего пользователя из localStorage
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser) {
+        alert('Сначала войдите в систему!');
+        return;
+    }
+
+    const user_id = currentUser.user_id;
+
+    fetch(`/post/${post_id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            user_id: user_id,
+            title: title,
+            content: content,
+            tags: tags,
+            visibility: visibility
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const messageDiv = document.getElementById('edit-post-message');
+        if (data.success) {
+            messageDiv.innerHTML =
+                `<div class="message success">${data.message}</div>`;
+            // Очистка формы после успешного редактирования
+            document.getElementById('edit-title').value = '';
+            document.getElementById('edit-content').value = '';
+            document.getElementById('edit-tags').value = '';
+        } else {
+            messageDiv.innerHTML = `<div class="message error">Ошибка: ${data.error}</div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка редактирования поста:', error);
+        document.getElementById('edit-post-message').innerHTML =
+            '<div class="message error">Произошла сетевая ошибка</div>';
+    });
+}
+
+function deletePost() {
+    const post_id = parseInt(document.getElementById('edit-post-id').value);
+
+    // Берём ID текущего пользователя из localStorage
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser) {
+        alert('Сначала войдите в систему!');
+        return;
+    }
+
+    const user_id = currentUser.user_id;
+
+    if (!confirm('Вы уверены, что хотите удалить этот пост?')) {
+        return;
+    }
+
+    fetch(`/post/${post_id}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ user_id: user_id })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const messageDiv = document.getElementById('edit-post-message');
+        if (data.success) {
+            messageDiv.innerHTML =
+                `<div class="message success">${data.message}</div>`;
+            // Очистка формы после удаления
+            document.getElementById('edit-post-id').value = '';
+        } else {
+            messageDiv.innerHTML = `<div class="message error">Ошибка: ${data.error}</div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка удаления поста:', error);
+        document.getElementById('edit-
