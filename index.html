@@ -132,6 +132,21 @@
 <div id="sorted-posts-message"></div>
 <div id="sorted-posts-container"></div>
 
+        <hr>
+<h2>Комментарии к постам</h2>
+<div>
+    <input type="number" id="comment-post-id" placeholder="ID поста для комментариев" required>
+    <button onclick="loadCommentsForPost()">Показать комментарии</button>
+</div>
+<div id="comments-message"></div>
+<div id="comments-container"></div>
+
+<div id="add-comment-form" style="margin-top: 20px;">
+    <h3>Добавить комментарий</h3>
+    <textarea id="comment-content" placeholder="Ваш комментарий..." rows="3" required></textarea>
+    <button onclick="addCommentToPost()">Отправить комментарий</button>
+</div>
+
 <hr>
 <h2>Все доступные теги</h2>
 <button onclick="loadAllTags()">Показать все теги</button>
