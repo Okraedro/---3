@@ -12,6 +12,24 @@ def init_db():
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   username TEXT UNIQUE NOT NULL,
                   password_hash TEXT NOT NULL)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS access_requests
+             (id INTEGER PRIMARY KEY AUTOINCREMENT,
+              post_id INTEGER,
+              author_id INTEGER,
+              requester_id INTEGER,
+              status TEXT DEFAULT 'pending',
+              requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (post_id) REFERENCES posts (id),
+              FOREIGN KEY (author_id) REFERENCES users (id),
+              FOREIGN KEY (requester_id) REFERENCES users (id))''')
+c.execute('''CREATE TABLE IF NOT EXISTS granted_access
+             (post_id INTEGER,
+              user_id INTEGER,
+              granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (post_id, user_id),
+              FOREIGN KEY (post_id) REFERENCES posts (id),
+              FOREIGN KEY (user_id) REFERENCES users (id))''')
+
     conn.commit()
     conn.close()
 
@@ -503,4 +521,185 @@ def search_posts_by_tags():
         })
 
     return jsonify(result)
+def init_db():
+    conn = sqlite3.connect('blog.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  username TEXT UNIQUE NOT NULL,
+                  password_hash TEXT NOT NULL)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS posts
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  user_id INTEGER NOT NULL,
+                  title TEXT NOT NULL,
+                  content TEXT NOT NULL,
+                  tags TEXT,
+                  visibility TEXT DEFAULT 'public',
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  FOREIGN KEY (user_id) REFERENCES users (id))''')
+    conn.commit()
+    conn.close()
+@app.route('/post/private', methods=['POST'])
+def create_private_post():
+    data = request.json
+
+    # Валидация входных данных
+    if not data or 'user_id' not in data or 'title' not in data or 'content' not in data:
+        return jsonify({
+            'success': False,
+            'error': 'Не заполнены все обязательные поля'
+        }), 400
+
+    user_id = data['user_id']
+    title = data['title'].strip()
+    content = data['content'].strip()
+    tags = data.get('tags', '').strip()
+
+    # Дополнительная валидация
+    if len(title) < 3:
+        return jsonify({
+            'success': False,
+            'error': 'Заголовок должен содержать минимум 3 символа'
+        }), 400
+    if len(content) < 10:
+        return jsonify({
+            'success': False,
+            'error': 'Содержание поста должно содержать минимум 10 символов'
+        }), 400
+
+    try:
+        conn = sqlite3.connect('blog.db')
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO posts (user_id, title, content, tags, visibility)
+            VALUES (?, ?, ?, ?, 'private_request')
+        "", (user_id, title, content, tags))
+        post_id = c.lastrowid
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Скрытый пост создан успешно',
+            'post_id': post_id,
+            'title': title,
+            'visibility': 'private_request'
+        }), 201
+    except sqlite3.Error as e:
+        return jsonify({
+            'success': False,
+            'error': f'Ошибка базы данных: {str(e)}'
+        }), 500
+@app.route('/post/<int:post_id>/request-access', methods=['POST'])
+def request_post_access(post_id):
+    data = request.json
+    if not data or 'requester_id' not in data:
+        return jsonify({
+            'success': False,
+            'error': 'Не заполнен ID запрашивающего пользователя'
+        }), 400
+
+    requester_id = data['requester_id']
+
+    try:
+        conn = sqlite3.connect('blog.db')
+        c = conn.cursor()
+
+        # Проверяем существование поста и его видимость
+        c.execute("SELECT user_id, visibility FROM posts WHERE id = ?", (post_id,))
+        post = c.fetchone()
+
+        if not post:
+            return jsonify({
+                'success': False,
+                'error': 'Пост не найден'
+            }), 404
+
+        if post[1] != 'private_request':
+            return jsonify({
+                'success': False,
+                'error': 'Этот пост не является скрытым по запросу'
+            }), 400
+
+        author_id = post[0]
+
+        # Проверяем, не запрашивал ли уже пользователь доступ
+        c.execute("""
+            SELECT 1 FROM access_requests
+            WHERE post_id = ? AND requester_id = ?
+        "", (post_id, requester_id))
+
+        if c.fetchone():
+            return jsonify({
+                'success': False,
+                'error': 'Вы уже запрашивали доступ к этому посту'
+            }), 409
+
+        # Создаём запрос на доступ
+        c.execute("""
+            INSERT INTO access_requests (post_id, author_id, requester_id, status)
+            VALUES (?, ?, ?, 'pending')
+        "", (post_id, author_id, requester_id))
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Запрос на доступ отправлен автору поста'
+        }), 200
+    except sqlite3.Error as e:
+        return jsonify({
+            'success': False,
+            'error': f'Ошибка базы данных: {str(e)}'
+        }), 500
+@app.route('/access-request/<int:request_id>/approve', methods=['POST'])
+def approve_access_request(request_id):
+    data = request.json
+    if not data or 'approver_id' not in data:
+        return jsonify({
+            'success': False,
+            'error': 'Не заполнен ID утверждающего пользователя'
+        }), 400
+
+    approver_id = data['approver_id']
+
+    try:
+        conn = sqlite3.connect('blog.db')
+        c = conn.cursor()
+
+        # Проверяем запрос и право утверждать
+        c.execute("""
+            SELECT author_id, post_id FROM access_requests
+            WHERE id = ? AND author_id = ? AND status = 'pending'
+        "", (request_id, approver_id))
+
+        request_data = c.fetchone()
+        if not request_data:
+            return jsonify({
+                'success': False,
+                'error': 'Запрос не найден или у вас нет прав на утверждение'
+            }), 403
+
+        post_id = request_data[1]
+
+        # Обновляем статус запроса
+        c.execute("UPDATE access_requests SET status = 'approved' WHERE id = ?",
+                  (request_id,))
+
+        # Добавляем в таблицу разрешённого доступа
+        c.execute("INSERT INTO granted_access (post_id, user_id) VALUES (?, ?)",
+                  (post_id, request_data[0]))
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Доступ одобрен'
+        }), 200
+    except sqlite3.Error as e:
+        return jsonify({
+            'success': False,
+            'error': f'Ошибка базы данных: {str(e)}'
+        }), 500
 
