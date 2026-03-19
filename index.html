@@ -90,6 +90,21 @@
 <button onclick="searchPostsByTags()">Найти посты</button>
 <div id="search-results-message"></div>
 <div id="search-results-container"></div>
+<hr>
+<h2>Редактирование и удаление постов</h2>
+<div id="edit-post-form">
+    <input type="number" id="edit-post-id" placeholder="ID поста" required>
+    <input type="text" id="edit-title" placeholder="Новый заголовок">
+    <textarea id="edit-content" placeholder="Новое содержание" rows="4"></textarea>
+    <input type="text" id="edit-tags" placeholder="Новые теги (через запятую)">
+    <select id="edit-visibility">
+        <option value="public">Публичный</option>
+        <option value="private_request">Скрытый (по запросу)</option>
+    </select>
+    <button onclick="updatePost()">Обновить пост</button>
+    <button onclick="deletePost()" style="background: #dc3545;">Удалить пост</button>
+</div>
+<div id="edit-post-message"></div>
 
 
 <hr>
