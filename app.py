@@ -359,4 +359,148 @@ def get_all_users():
 
     result = [{'id': user[0], 'username': user[1]} for user in users]
     return jsonify(result)
+@app.route('/posts/public', methods=['GET'])
+def get_public_posts():
+    """
+    Возвращает все публичные посты с информацией об авторах.
+    Сортирует по дате создания (новые сверху).
+    """
+    conn = sqlite3.connect('blog.db')
+    c = conn.cursor()
+
+    c.execute("""
+        SELECT
+            p.id,
+            p.user_id,
+            p.title,
+            p.content,
+            p.tags,
+            p.visibility,
+            u.username,
+            p.created_at
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.visibility = 'public'
+        ORDER BY p.created_at DESC, p.id DESC
+    "")
+
+    posts = c.fetchall()
+    conn.close()
+
+    # Форматируем результат
+    result = []
+    for post in posts:
+        result.append({
+            'id': post[0],
+            'user_id': post[1],
+            'title': post[2],
+            'content': post[3],
+            'tags': post[4],
+            'visibility': post[5],
+            'username': post[6],
+            'created_at': post[7] if post[7] else 'Неизвестно'
+        })
+
+    return jsonify(result)
+@app.route('/user/<int:user_id>/posts', methods=['GET'])
+def get_user_posts(user_id):
+    """
+    Возвращает посты конкретного пользователя (только публичные).
+    """
+    conn = sqlite3.connect('blog.db')
+    c = conn.cursor()
+
+    c.execute("""
+        SELECT
+            p.id,
+            p.user_id,
+            p.title,
+            p.content,
+            p.tags,
+            p.visibility,
+            u.username,
+            p.created_at
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.user_id = ? AND p.visibility = 'public'
+        ORDER BY p.created_at DESC, p.id DESC
+    "", (user_id,))
+
+    posts = c.fetchall()
+    conn.close()
+
+    result = []
+    for post in posts:
+        result.append({
+            'id': post[0],
+            'user_id': post[1],
+            'title': post[2],
+            'content': post[3],
+            'tags': post[4],
+            'visibility': post[5],
+            'username': post[6],
+            'created_at': post[7] if post[7] else 'Неизвестно'
+        })
+
+    return jsonify(result)
+@app.route('/posts/search', methods=['GET'])
+def search_posts_by_tags():
+    """
+    Поиск публичных постов по тегам.
+    Пример запроса: /posts/search?tags=python,web
+    """
+    tags_param = request.args.get('tags', '')
+    if not tags_param:
+        return jsonify({'error': 'Параметр tags обязателен'}), 400
+
+    tags = [tag.strip() for tag in tags_param.split(',') if tag.strip()]
+    if not tags:
+        return jsonify([]), 200
+
+    conn = sqlite3.connect('blog.db')
+    c = conn.cursor()
+
+    # Создаём условия для поиска по нескольким тегам
+    conditions = []
+    params = []
+
+    for tag in tags:
+        conditions.append("p.tags LIKE ?")
+        params.append(f'%{tag}%')
+
+    where_clause = " AND ".join(conditions)
+    query = f"""
+        SELECT
+            p.id,
+            p.user_id,
+            p.title,
+            p.content,
+            p.tags,
+            p.visibility,
+            u.username,
+            p.created_at
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE {where_clause} AND p.visibility = 'public'
+        ORDER BY p.created_at DESC, p.id DESC
+    """
+
+    c.execute(query, params)
+    posts = c.fetchall()
+    conn.close()
+
+    result = []
+    for post in posts:
+        result.append({
+            'id': post[0],
+            'user_id': post[1],
+            'title': post[2],
+            'content': post[3],
+            'tags': post[4],
+            'visibility': post[5],
+            'username': post[6],
+            'created_at': post[7] if post[7] else 'Неизвестно'
+        })
+
+    return jsonify(result)
 
