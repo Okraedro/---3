@@ -29,6 +29,15 @@ c.execute('''CREATE TABLE IF NOT EXISTS granted_access
               PRIMARY KEY (post_id, user_id),
               FOREIGN KEY (post_id) REFERENCES posts (id),
               FOREIGN KEY (user_id) REFERENCES users (id))''')
+c.execute('''CREATE TABLE IF NOT EXISTS comments
+             (id INTEGER PRIMARY KEY AUTOINCREMENT,
+              post_id INTEGER NOT NULL,
+              user_id INTEGER NOT NULL,
+              content TEXT NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (post_id) REFERENCES posts (id),
+              FOREIGN KEY (user_id) REFERENCES users (id))''')
+
 
     conn.commit()
     conn.close()
@@ -806,6 +815,161 @@ def delete_post(post_id):
         return jsonify({
             'success': True,
             'message': 'Пост успешно удалён'
+        }), 200
+    except sqlite3.Error as e:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': f'Ошибка базы данных: {str(e)}'
+        }), 500
+@app.route('/post/<int:post_id>/comment', methods=['POST'])
+def add_comment(post_id):
+    data = request.json
+
+    # Валидация входных данных
+    if not data or 'user_id' not in data or 'content' not in data:
+        return jsonify({
+            'success': False,
+            'error': 'Не заполнены все обязательные поля'
+        }), 400
+
+    user_id = data['user_id']
+    content = data['content'].strip()
+
+    if len(content) < 1:
+        return jsonify({
+            'success': False,
+            'error': 'Содержание комментария не может быть пустым'
+        }), 400
+
+    # Проверяем существование поста
+    conn = sqlite3.connect('blog.db')
+    c = conn.cursor()
+    c.execute("SELECT id FROM posts WHERE id = ?", (post_id,))
+    post = c.fetchone()
+
+    if not post:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': 'Пост не найден'
+        }), 404
+
+    try:
+        # Добавляем комментарий
+        c.execute("""
+            INSERT INTO comments (post_id, user_id, content)
+            VALUES (?, ?, ?)
+        "", (post_id, user_id, content))
+        comment_id = c.lastrowid
+
+        # Получаем информацию о комментарии с данными пользователя
+        c.execute("""
+            SELECT
+                c.id,
+                c.content,
+                c.created_at,
+                u.username
+            FROM comments c
+            JOIN users u ON c.user_id = u.id
+            WHERE c.id = ?
+        "", (comment_id,))
+        comment = c.fetchone()
+        conn.commit()
+        conn.close()
+
+        result = {
+            'id': comment[0],
+            'content': comment[1],
+            'created_at': comment[2],
+            'username': comment[3]
+        }
+
+        return jsonify({
+            'success': True,
+            'message': 'Комментарий добавлен успешно',
+            'comment': result
+        }), 201
+    except sqlite3.Error as e:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': f'Ошибка базы данных: {str(e)}'
+        }), 500
+@app.route('/post/<int:post_id>/comments', methods=['GET'])
+def get_post_comments(post_id):
+    """Возвращает все комментарии к конкретному посту"""
+    conn = sqlite3.connect('blog.db')
+    c = conn.cursor()
+
+    c.execute("""
+        SELECT
+            c.id,
+            c.content,
+            c.created_at,
+            u.username,
+            u.id as user_id
+        FROM comments c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.post_id = ?
+        ORDER BY c.created_at ASC
+    "", (post_id,))
+
+    comments = c.fetchall()
+    conn.close()
+
+    result = []
+    for comment in comments:
+        result.append({
+            'id': comment[0],
+            'content': comment[1],
+            'created_at': comment[2],
+            'username': comment[3],
+            'user_id': comment[4]
+        })
+
+    return jsonify(result)
+@app.route('/comment/<int:comment_id>', methods=['DELETE'])
+def delete_comment(comment_id):
+    data = request.json
+    if not data or 'user_id' not in data:
+        return jsonify({
+            'success': False,
+            'error': 'Не заполнен ID пользователя'
+        }), 400
+
+    user_id = data['user_id']
+
+    conn = sqlite3.connect('blog.db')
+    c = conn.cursor()
+
+    # Проверяем существование комментария и права доступа
+    c.execute("SELECT user_id FROM comments WHERE id = ?", (comment_id,))
+    comment = c.fetchone()
+
+    if not comment:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': 'Комментарий не найден'
+        }), 404
+
+    if comment[0] != user_id:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': 'У вас нет прав на удаление этого комментария'
+        }), 403
+
+    # Удаляем комментарий
+    try:
+        c.execute("DELETE FROM comments WHERE id = ?", (comment_id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Комментарий успешно удалён'
         }), 200
     except sqlite3.Error as e:
         conn.close()
