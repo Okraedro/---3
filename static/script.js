@@ -161,3 +161,117 @@ function unfollowUser() {
         }
     })
 }
+    function loadUserFeed() {
+    const user_id = parseInt(document.getElementById('feed-user-id').value);
+
+    fetch(`/feed/${user_id}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(posts => {
+        const container = document.getElementById('feed-container');
+        const messageDiv = document.getElementById('feed-message');
+
+        if (posts.length === 0) {
+            container.innerHTML = '<p>Пока нет постов от пользователей, на которых вы подписаны</p>';
+            return;
+        }
+
+        // Формируем HTML для отображения постов
+        let feedHTML = '<div class="feed-posts">';
+        posts.forEach(post => {
+            feedHTML += `
+                <div class="post-card">
+                    <h3>${post.title}</h3>
+            <p><strong>Автор:</strong> ${post.username} (ID: ${post.user_id})</p>
+            <p>${post.content}</p>
+            ${post.tags ? `<p><strong>Теги:</strong> ${post.tags}</p>` : ''}
+            <small>Опубликовано: ${post.created_at}</small>
+            <hr>
+        </div>
+            `;
+        });
+        feedHTML += '</div>';
+        container.innerHTML = feedHTML;
+        messageDiv.innerHTML = `<div class="message success">Лента обновлена успешно</div>`;
+    })
+    .catch(error => {
+        console.error('Ошибка загрузки ленты:', error);
+        document.getElementById('feed-message').innerHTML =
+            '<div class="message error">Произошла ошибка при загрузке ленты</div>';
+    });
+}
+
+function loadAllUsers() {
+    fetch('/users', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(users => {
+        const usersList = document.getElementById('users-list');
+
+        if (users.length === 0) {
+            usersList.innerHTML = '<p>Пользователей не найдено</p>';
+            return;
+        }
+
+        // Формируем список пользователей с кнопками подписки
+        let usersHTML = '<div class="users-grid">';
+        users.forEach(user => {
+            usersHTML += `
+                <div class="user-card">
+            <p><strong>${user.username}</strong> (ID: ${user.id})</p>
+            <button onclick="subscribeToUser(${user.id})">Подписаться</button>
+        </div>
+            `;
+        });
+        usersHTML += '</div>';
+        usersList.innerHTML = usersHTML;
+    })
+    .catch(error => {
+        console.error('Ошибка загрузки пользователей:', error);
+        document.getElementById('users-list').innerHTML =
+            '<div class="message error">Произошла ошибка при загрузке списка пользователей</div>';
+    });
+}
+
+function subscribeToUser(following_id) {
+    // Берём ID текущего пользователя из localStorage
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser) {
+        alert('Сначала войдите в систему!');
+        return;
+    }
+
+    const follower_id = currentUser.user_id;
+
+    // Используем существующую функцию подписки
+    fetch('/follow', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ follower_id, following_id })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            // Обновляем список пользователей
+            loadAllUsers();
+        } else {
+            alert('Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка подписки:', error);
+        alert('Произошла сетевая ошибка');
+    });
+}
+
