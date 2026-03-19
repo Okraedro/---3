@@ -286,3 +286,77 @@ def get_user_followers(user_id):
     result = [{'id': fol[0], 'username': fol[1]} for fol in followers]
     return jsonify(result)
 
+@app.route('/feed/<int:user_id>', methods=['GET'])
+def get_user_feed(user_id):
+    """
+    Возвращает посты пользователей, на которых подписан user_id.
+    Включает только публичные посты.
+    """
+    conn = sqlite3.connect('blog.db')
+    c = conn.cursor()
+
+    # Получаем ID пользователей, на которых подписан текущий пользователь
+    c.execute("""
+        SELECT following_id
+        FROM subscriptions
+        WHERE follower_id = ?
+    "", (user_id,))
+    following_ids = [row[0] for row in c.fetchall()]
+
+    if not following_ids:
+        # Если нет подписок, возвращаем пустой список
+        conn.close()
+        return jsonify([])
+
+    # Формируем строку с плейсхолдерами для IN-запроса
+    placeholders = ','.join('?' * len(following_ids))
+
+    # Получаем посты от пользователей, на которых подписан пользователь
+    query = f"""
+        SELECT
+            p.id,
+            p.user_id,
+            p.title,
+            p.content,
+            p.tags,
+            p.visibility,
+            u.username,
+            p.created_at
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE p.user_id IN ({placeholders})
+          AND p.visibility = 'public'
+        ORDER BY p.created_at DESC, p.id DESC
+    """
+
+    c.execute(query, following_ids)
+    posts = c.fetchall()
+    conn.close()
+
+    # Форматируем результат
+    result = []
+    for post in posts:
+        result.append({
+            'id': post[0],
+            'user_id': post[1],
+            'title': post[2],
+            'content': post[3],
+            'tags': post[4],
+            'visibility': post[5],
+            'username': post[6],
+            'created_at': post[7] if post[7] else 'Неизвестно'
+        })
+
+    return jsonify(result)
+@app.route('/users', methods=['GET'])
+def get_all_users():
+    """Возвращает список всех пользователей (для поиска и подписки)"""
+    conn = sqlite3.connect('blog.db')
+    c = conn.cursor()
+    c.execute("SELECT id, username FROM users ORDER BY username")
+    users = c.fetchall()
+    conn.close()
+
+    result = [{'id': user[0], 'username': user[1]} for user in users]
+    return jsonify(result)
+
