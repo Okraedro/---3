@@ -105,6 +105,37 @@
     <button onclick="deletePost()" style="background: #dc3545;">Удалить пост</button>
 </div>
 <div id="edit-post-message"></div>
+<hr>
+<h2>Добавление поста с тегами</h2>
+<div id="create-post-form">
+    <input type="text" id="new-title" placeholder="Заголовок поста" required>
+    <textarea id="new-content" placeholder="Содержание поста" rows="4" required></textarea>
+    <input type="text" id="new-tags" placeholder="Теги через запятую (python,web,tutorial)">
+    <select id="new-visibility">
+        <option value="public">Публичный</option>
+        <option value="private_request">Скрытый (по запросу)</option>
+    </select>
+    <button onclick="createNewPost()">Создать пост</button>
+</div>
+<div id="create-post-message"></div>
+
+<hr>
+<h2>Сортировка постов по тегам</h2>
+<div>
+    <input type="text" id="sort-tags" placeholder="Теги для сортировки (через запятую)" required>
+    <select id="sort-order">
+        <option value="asc">По возрастанию даты</option>
+        <option value="desc">По убыванию даты</option>
+    </select>
+    <button onclick="loadPostsSortedByTags()">Загрузить отсортированные посты</button>
+</div>
+<div id="sorted-posts-message"></div>
+<div id="sorted-posts-container"></div>
+
+<hr>
+<h2>Все доступные теги</h2>
+<button onclick="loadAllTags()">Показать все теги</button>
+<div id="tags-list"></div>
 
 
 <hr>
