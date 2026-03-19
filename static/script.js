@@ -274,4 +274,63 @@ function subscribeToUser(following_id) {
         alert('Произошла сетевая ошибка');
     });
 }
+    function loadPublicPosts() {
+    fetch('/posts/public', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(posts => {
+        const container = document.getElementById('public-posts-container');
+        const messageDiv = document.getElementById('public-posts-message');
+
+        if (!posts || posts.length === 0) {
+            container.innerHTML = '<p>Публичных постов пока нет</p>';
+            return;
+        }
+
+        // Формируем HTML для отображения постов
+        let postsHTML = '<div class="public-posts">';
+        posts.forEach(post => {
+            postsHTML += `
+                <div class="post-card">
+                    <h3>${post.title}</h3>
+            <p><strong>Автор:</strong> ${post.username} (ID: ${post.user_id})</p>
+            <p>${post.content}</p>
+            ${post.tags ? `<p><strong>Теги:</strong> ${post.tags}</p>` : ''}
+            <small>Опубликовано: ${post.created_at}</small>
+            <hr>
+        </div>
+            `;
+        });
+        postsHTML += '</div>';
+        container.innerHTML = postsHTML;
+        messageDiv.innerHTML = `<div class="message success">Загружено ${posts.length} публичных постов</div>`;
+    })
+    .catch(error => {
+        console.error('Ошибка загрузки публичных постов:', error);
+        document.getElementById('public-posts-message').innerHTML =
+            '<div class="message error">Произошла ошибка при загрузке публичных постов</div>';
+    });
+}
+
+function searchPostsByTags() {
+    const tags = document.getElementById('search-tags').value;
+
+    if (!tags) {
+        alert('Введите теги для поиска');
+        return;
+    }
+
+    fetch(`/posts/search?tags=${encodeURIComponent(tags)}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(posts => {
+        const container = document.getElementById('search-results-container');
 
