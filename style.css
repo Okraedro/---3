@@ -1,0 +1,22 @@
+.feed-posts {
+    margin-top: 20px;
+}
+
+.post-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.user-card {
+    border: 1px solid #eee;
+    padding: 1
