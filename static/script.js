@@ -111,4 +111,53 @@ function login() {
             '<div class="message error">Произошла сетевая ошибка</div>';
     });
 }
+    function followUser() {
+    const follower_id = parseInt(document.getElementById('follower-id').value);
+    const following_id = parseInt(document.getElementById('following-id').value);
+
+    fetch('/follow', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ follower_id, following_id })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const messageDiv = document.getElementById('follow-message');
+        if (data.success) {
+            messageDiv.innerHTML =
+                `<div class="message success">${data.message}</div>`;
+        } else {
+            messageDiv.innerHTML = `<div class="message error">Ошибка: ${data.error}</div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка:', error);
+        document.getElementById('follow-message').innerHTML =
+            '<div class="message error">Произошла сетевая ошибка</div>';
+    });
+}
+
+function unfollowUser() {
+    const follower_id = parseInt(document.getElementById('follower-id').value);
+    const following_id = parseInt(document.getElementById('following-id').value);
+
+    fetch('/unfollow', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ follower_id, following_id })
+    })
+    .then(response => response.json())
+    .then(data => {
+        const messageDiv = document.getElementById('follow-message');
+        if (data.success) {
+            messageDiv.innerHTML =
+                `<div class="message success">${data.message}</div>`;
+        } else {
+            messageDiv.innerHTML = `<div class="message error">Ошибка: ${data.error}</div>`;
+        }
+    })
 }
