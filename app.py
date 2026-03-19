@@ -703,3 +703,113 @@ def approve_access_request(request_id):
             'error': f'Ошибка базы данных: {str(e)}'
         }), 500
 
+@app.route('/post/<int:post_id>', methods=['PUT'])
+def edit_post(post_id):
+    data = request.json
+
+    # Валидация входных данных
+    if not data or 'user_id' not in data:
+        return jsonify({
+            'success': False,
+            'error': 'Не заполнен ID пользователя'
+        }), 400
+
+    user_id = data['user_id']
+    title = data.get('title', '').strip()
+    content = data.get('content', '').strip()
+    tags = data.get('tags', '').strip()
+    visibility = data.get('visibility', 'public')
+
+    # Проверка существования поста и прав доступа
+    conn = sqlite3.connect('blog.db')
+    c = conn.cursor()
+    c.execute("SELECT user_id FROM posts WHERE id = ?", (post_id,))
+    post = c.fetchone()
+
+    if not post:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': 'Пост не найден'
+        }), 404
+
+    if post[0] != user_id:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': 'У вас нет прав на редактирование этого поста'
+        }), 403
+
+    # Обновление поста
+    try:
+        c.execute("""
+            UPDATE posts
+            SET title = ?, content = ?, tags = ?, visibility = ?
+            WHERE id = ?
+        "", (title, content, tags, visibility, post_id))
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Пост успешно отредактирован',
+            'post_id': post_id
+        }), 200
+    except sqlite3.Error as e:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': f'Ошибка базы данных: {str(e)}'
+        }), 500
+@app.route('/post/<int:post_id>', methods=['DELETE'])
+def delete_post(post_id):
+    data = request.json
+
+    if not data or 'user_id' not in data:
+        return jsonify({
+            'success': False,
+            'error': 'Не заполнен ID пользователя'
+        }), 400
+
+    user_id = data['user_id']
+
+    conn = sqlite3.connect('blog.db')
+    c = conn.cursor()
+
+    # Проверяем существование поста и права доступа
+    c.execute("SELECT user_id FROM posts WHERE id = ?", (post_id,))
+    post = c.fetchone()
+
+    if not post:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': 'Пост не найден'
+        }), 404
+
+    if post[0] != user_id:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': 'У вас нет прав на удаление этого поста'
+        }), 403
+
+    # Удаляем пост
+    try:
+        c.execute("DELETE FROM posts WHERE id = ?", (post_id,))
+        # Также удаляем связанные запросы на доступ и разрешения
+        c.execute("DELETE FROM access_requests WHERE post_id = ?", (post_id,))
+        c.execute("DELETE FROM granted_access WHERE post_id = ?", (post_id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Пост успешно удалён'
+        }), 200
+    except sqlite3.Error as e:
+        conn.close()
+        return jsonify({
+            'success': False,
+            'error': f'Ошибка базы данных: {str(e)}'
+        }), 500
