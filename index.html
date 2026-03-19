@@ -64,6 +64,20 @@
     <button onclick="loadFollowers()">Показать подписчиков</button>
     <div id="followers-list"></div>
 </div>
+        <hr>
+<h2>Лента подписок</h2>
+<div>
+    <input type="number" id="feed-user-id" placeholder="Ваш ID пользователя" required>
+    <button onclick="loadUserFeed()">Загрузить ленту</button>
+</div>
+<div id="feed-message"></div>
+<div id="feed-container"></div>
+
+<hr>
+<h2>Поиск пользователей для подписки</h2>
+<button onclick="loadAllUsers()">Показать всех пользователей</button>
+<div id="users-list"></div>
+
 
     </div>
 
