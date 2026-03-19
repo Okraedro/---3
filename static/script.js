@@ -451,3 +451,43 @@ function createNewPost() {
         })
     })
     .then(response => response.
+function loadCommentsForPost() {
+    const post_id = parseInt(document.getElementById('comment-post-id').value);
+
+    fetch(`/post/${post_id}/comments`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(comments => {
+        const container = document.getElementById('comments-container');
+        const messageDiv = document.getElementById('comments-message');
+
+        if (!comments || comments.length === 0) {
+            container.innerHTML = '<p>Пока нет комментариев к этому посту</p>';
+            return;
+        }
+
+        // Формируем HTML для отображения комментариев
+        let commentsHTML = '<div class="comments-list">';
+        comments.forEach(comment => {
+            commentsHTML += `
+                <div class="comment-item" data-comment-id="${comment.id}">
+                    <p><strong>${comment.username}</strong> <small>(${comment.created_at})</small></p>
+            <p>${comment.content}</p>
+            ${comment.user_id === currentUser.user_id ?
+                `<button onclick="deleteComment(${comment.id})" style="background: #dc3545; color: white;">Удалить</button>` :
+                ''}
+            <hr>
+        </div>
+            `;
+        });
+        commentsHTML += '</div>';
+        container.innerHTML = commentsHTML;
+        messageDiv.innerHTML = `<div class="message success">Загружено ${comments.length} комментариев</div>`;
+    })
+    .catch(error => {
+        console.error('Ошибка загрузки комментариев:', error);
+        document.getElementById
