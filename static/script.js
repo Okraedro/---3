@@ -422,3 +422,32 @@ function deletePost() {
     .catch(error => {
         console.error('Ошибка удаления поста:', error);
         document.getElementById('edit-
+function createNewPost() {
+    const title = document.getElementById('new-title').value;
+    const content = document.getElementById('new-content').value;
+    const tags = document.getElementById('new-tags').value;
+    const visibility = document.getElementById('new-visibility').value;
+
+    // Берём ID текущего пользователя из localStorage
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser) {
+        alert('Сначала войдите в систему!');
+        return;
+    }
+
+    const user_id = currentUser.user_id;
+
+    fetch('/post', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            user_id: user_id,
+            title: title,
+            content: content,
+            tags: tags,
+            visibility: visibility
+        })
+    })
+    .then(response => response.
