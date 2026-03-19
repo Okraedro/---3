@@ -77,6 +77,27 @@
 <h2>Поиск пользователей для подписки</h2>
 <button onclick="loadAllUsers()">Показать всех пользователей</button>
 <div id="users-list"></div>
+<hr>
+<h2>Все публичные посты</h2>
+<button onclick="loadPublicPosts()">Загрузить все посты</button>
+<div id="public-posts-message"></div>
+<div id="public-posts-container"></div>
+
+
+<hr>
+<h2>Поиск постов по тегам</h2>
+<input type="text" id="search-tags" placeholder="Теги через запятую (python,web)">
+<button onclick="searchPostsByTags()">Найти посты</button>
+<div id="search-results-message"></div>
+<div id="search-results-container"></div>
+
+
+<hr>
+<h2>Посты конкретного пользователя</h2>
+<input type="number" id="user-posts-id" placeholder="ID пользователя">
+<button onclick="loadUserPublicPosts()">Показать посты пользователя</button>
+<div id="user-posts-message"></div>
+<div id="user-posts-container"></div>
 
 
     </div>
